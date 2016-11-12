@@ -7,6 +7,7 @@ class FullyConnectedNeuralNet {
         void RandomiseWeights();
         void SetInput(const double *input);
         void GetOutput(double *output);
+        double GetCrossEntropy(const int target);
         void ForwardPropogate();
         void BackPropogate(int target);
 
@@ -16,6 +17,8 @@ class FullyConnectedNeuralNet {
 
         static void Sigmoid(int n, double *x, double *z);
         static void Softmax(int n, double *x, double *z);
+
+        double BatchTrain(int N, const double *inputs, const int *targets);
 
     private:
         typedef void(*layerFunc_t)(int, double*, double*);
@@ -31,6 +34,7 @@ class FullyConnectedNeuralNet {
 
         double *allWeightDerivs; // Derivative of loss function with respect to weights
         double **dEdW;  // As above, but per layer
+        double *batchWeightsDeriv;    // Holds mean derivative in batch learning
 
         double **x; // Outputs from each layer
         double **z; // Inputs to each layer

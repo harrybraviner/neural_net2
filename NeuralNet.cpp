@@ -54,6 +54,8 @@ FullyConnectedNeuralNet::FullyConnectedNeuralNet(int const numberOfHiddenLayers,
     for (int l=1; l<=L; l++) {
         dEdz[l] = new double[numberOfNodesInLayers[l]];
     }
+
+    batchWeightsDeriv = nullptr;
 }
 
 FullyConnectedNeuralNet::~FullyConnectedNeuralNet()
@@ -70,6 +72,8 @@ FullyConnectedNeuralNet::~FullyConnectedNeuralNet()
     delete [] activationFunction;
     for (int l=1; l<=L; l++) delete [] dEdz[l];
     delete [] dEdz;
+
+    if (batchWeightsDeriv != nullptr) delete [] batchWeightsDeriv;
 }
 
 void FullyConnectedNeuralNet::RandomiseWeights()
@@ -89,6 +93,12 @@ void FullyConnectedNeuralNet::SetInput(const double *input)
 void FullyConnectedNeuralNet::GetOutput(double *output)
 {
     std::memcpy(output, x[L], sizeof(double)*numberOfNodesInLayers[L]);
+}
+
+double FullyConnectedNeuralNet::GetCrossEntropy(const int target)
+{
+    double CE = -log(x[L][target]);
+    return CE;
 }
 
 void FullyConnectedNeuralNet::SetMatrix(int layer, const double *input)
@@ -186,4 +196,36 @@ void FullyConnectedNeuralNet::Softmax(int n, double *input, double *output)
     }
 
     for (int i=0; i<n; i++) output[i] /= sum;
+}
+
+double FullyConnectedNeuralNet::BatchTrain(int N, const double *input, const int *targets)
+{
+    // Ensure that the memory is assigned, and zeroed
+    if (batchWeightsDeriv == nullptr) {
+        batchWeightsDeriv = new double[totalNumberOfWeights]();
+    } else {
+        for (int i=0; i<totalNumberOfWeights; i++)
+            batchWeightsDeriv[i] = 0.0;
+    }
+    double CE = 0.0;
+
+    // Loop over all the training examples
+    for (int i=0; i<N; i++) {
+        int nodesInInput = numberOfNodesInLayers[0];
+        const double *thisInput = &input[nodesInInput*i];
+        int thisTarget = targets[i];
+        
+        SetInput(thisInput);
+        ForwardPropogate();
+        CE += GetCrossEntropy(thisTarget);
+        BackPropogate(thisTarget);
+        for (int j=0; i< totalNumberOfWeights; j++)
+            batchWeightsDeriv[j] += allWeights[j];
+    }
+
+    CE /= N;
+    for (int j=0; j< totalNumberOfWeights; j++)
+        batchWeightsDeriv[j] /= N;
+
+    return CE;  // Return the cross-entropy *before* training
 }
