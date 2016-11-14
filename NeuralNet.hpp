@@ -1,3 +1,9 @@
+#ifndef _FULLYCONNECTEDNEURALNET_HPP_
+#define _FULLYCONNECTEDNEURALNET_HPP_
+
+#include "Integrator.hpp"
+#include "MomentumIntegrator.hpp"
+
 class FullyConnectedNeuralNet {
     public:
         FullyConnectedNeuralNet(int const numberOfHiddenLayers, int const numberOfNodesInLayers[]);
@@ -41,12 +47,12 @@ class FullyConnectedNeuralNet {
         layerFunc_t *activationFunction; // z -> x
 
         double **dEdz; // Used in backpropogation
+
+        Integrator *integrator; // Used to update the weights
 };
 
 // ToDo:
-// * Forward propogation
-// * Back propogation
-// * Single forward propogation exposed, test
-// * Single back propogation exposed, test
 // * Batch gradient computation
 // * Incorporate momentum integrator
+
+#endif

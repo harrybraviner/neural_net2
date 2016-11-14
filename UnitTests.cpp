@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE ( Compare_numeric_derivs_to_backpropogation )
                    6.0, 1.0, 1.6, 0.3, -0.2};
     int layerCount[] = {3, 4, 2};
 
-    double y[] = {1.0, 0.0};
+    double y[] = {0.0, 1.0};
     double input[] = {0.0, 0.0, 0.0};
 
     FullyConnectedNeuralNet *nn = new FullyConnectedNeuralNet(1, layerCount);
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE ( Compare_numeric_derivs_to_backpropogation )
     nn->SetMatrix(2, m2);
     nn->SetInput(input);
     nn->ForwardPropogate();
-    nn->BackPropogate(0);
+    nn->BackPropogate(1);
 
     double *w1_derivs = new double[4*4];
     double *w2_derivs = new double[2*5];

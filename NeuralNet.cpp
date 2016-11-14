@@ -55,7 +55,9 @@ FullyConnectedNeuralNet::FullyConnectedNeuralNet(int const numberOfHiddenLayers,
         dEdz[l] = new double[numberOfNodesInLayers[l]];
     }
 
-    batchWeightsDeriv = nullptr;
+    batchWeightsDeriv = new double[totalNumberOfWeights]();
+
+    integrator = new MomentumIntegrator(totalNumberOfWeights, 0.5, 0.5, allWeights, batchWeightsDeriv);
 }
 
 FullyConnectedNeuralNet::~FullyConnectedNeuralNet()
@@ -73,15 +75,25 @@ FullyConnectedNeuralNet::~FullyConnectedNeuralNet()
     for (int l=1; l<=L; l++) delete [] dEdz[l];
     delete [] dEdz;
 
-    if (batchWeightsDeriv != nullptr) delete [] batchWeightsDeriv;
+    delete [] batchWeightsDeriv;
+
+    delete integrator;
 }
 
 void FullyConnectedNeuralNet::RandomiseWeights()
 {
-    std::uniform_real_distribution<double> unif(-0.3, 0.3);
+    std::uniform_real_distribution<double> unif(-0.01, 0.01);
     std::default_random_engine re;
     for (int i=0; i<totalNumberOfWeights; i++){
         allWeights[i] = unif(re);
+    }
+
+    // Set the biases to zero
+    for (int l=1; l<=L; l++) {
+        int cols = numberOfNodesInLayers[l-1]+1;
+        int rows = numberOfNodesInLayers[l];
+        for (int j=0; j<rows; j++)
+            W[l][j*cols + 0] = 0.0;
     }
 }
 
@@ -200,13 +212,9 @@ void FullyConnectedNeuralNet::Softmax(int n, double *input, double *output)
 
 double FullyConnectedNeuralNet::BatchTrain(int N, const double *input, const int *targets)
 {
-    // Ensure that the memory is assigned, and zeroed
-    if (batchWeightsDeriv == nullptr) {
-        batchWeightsDeriv = new double[totalNumberOfWeights]();
-    } else {
-        for (int i=0; i<totalNumberOfWeights; i++)
-            batchWeightsDeriv[i] = 0.0;
-    }
+    // Ensure that the memory is zeroed
+    for (int i=0; i<totalNumberOfWeights; i++)
+        batchWeightsDeriv[i] = 0.0;
     double CE = 0.0;
 
     // Loop over all the training examples
@@ -219,13 +227,15 @@ double FullyConnectedNeuralNet::BatchTrain(int N, const double *input, const int
         ForwardPropogate();
         CE += GetCrossEntropy(thisTarget);
         BackPropogate(thisTarget);
-        for (int j=0; i< totalNumberOfWeights; j++)
-            batchWeightsDeriv[j] += allWeights[j];
+        for (int j=0; j< totalNumberOfWeights; j++)
+            batchWeightsDeriv[j] += allWeightDerivs[j];
     }
 
     CE /= N;
     for (int j=0; j< totalNumberOfWeights; j++)
         batchWeightsDeriv[j] /= N;
+
+    integrator->Step();
 
     return CE;  // Return the cross-entropy *before* training
 }
